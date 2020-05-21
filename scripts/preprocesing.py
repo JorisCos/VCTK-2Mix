@@ -19,12 +19,12 @@ parser.add_argument('--VCTK_dir', type=str, required=True,
 
 def main(args):
     VCTK_dir = args.VCTK_dir
-    preproccess_VCTK(VCTK_dir)
+    preprocess_VCTK(VCTK_dir)
 
 
-def preproccess_VCTK(VCTK_dir):
+def preprocess_VCTK(VCTK_dir):
     dir_path = os.path.join(VCTK_dir, 'wav48')
-    save_path_cut = os.path.join(VCTK_dir, 'wav16_cut')
+    save_path_cut = os.path.join(VCTK_dir, 'wav16_cut_fixed')
     os.makedirs(save_path_cut, exist_ok=True)
 
     # Recursively look for .wav files in current directory

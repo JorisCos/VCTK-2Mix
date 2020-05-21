@@ -122,10 +122,7 @@ def create_VCTKmix_df(VCTK_md_file, VCTK_dir,
     mixtures_md["noise_path"] = {}
     mixtures_md["noise_gain"] = {}
     # Generate pairs of sources to mix
-    pairs = set_pairs(VCTK_md_file, n_src)
-    # To each pair associate a noise
-    pairs_noise = set_pairs_noise(pairs, wham_md_file)
-
+    pairs, pairs_noise = set_pairs(VCTK_md_file, wham_md_file, n_src)
     clip_counter = 0
     # For each combination create a new line in the dataframe
     for pair, pair_noise in tqdm(zip(pairs, pairs_noise), total=len(pairs)):
@@ -154,45 +151,91 @@ def create_VCTKmix_df(VCTK_md_file, VCTK_dir,
     return mixtures_md, mixtures_info
 
 
-def set_pairs(metadata_file, n_src):
+def set_pairs(VCTK_md_file, wham_md_file, n_src):
     """ set pairs of sources to make the mixture """
     # Initialize list for pairs sources
-    pair_list = []
+    utt_pairs = []
+    noise_pairs = []
+    while len(utt_pairs) < 3000:
+        utt_pairs = set_utt_pairs(VCTK_md_file, utt_pairs, n_src)
+        noise_pairs = set_noise_pairs(utt_pairs, noise_pairs,
+                                      VCTK_md_file, wham_md_file)
+        utt_pairs, noise_pairs = remove_duplicates(utt_pairs, noise_pairs)
+    utt_pairs = utt_pairs[:3000]
+    noise_pairs = noise_pairs[:3000]
+
+    return utt_pairs, noise_pairs
+
+
+def set_utt_pairs(VCTK_md_file, pair_list, n_src):
     # A counter
     c = 0
     # Index of the rows in the metadata file
-    index = list(range(len(metadata_file)))
+    index = list(range(len(VCTK_md_file)))
 
     # Try to create pairs with different speakers end after 200 fails
     while len(index) >= n_src and c < 200:
         couple = random.sample(index, n_src)
-        # Verify that speakers are different
-        speaker_list = set([metadata_file.iloc[couple[i]]['speaker_ID']
+        # Check that speakers are different
+        speaker_list = set([VCTK_md_file.iloc[couple[i]]['speaker_ID']
                             for i in range(n_src)])
         # If there are duplicates then increment the counter
         if len(speaker_list) != n_src:
             c += 1
-        # Else append the combination to L and erase the combination
+        # Else append the combination to pair_list and erase the combination
         # from the available indexes
         else:
             for i in range(n_src):
                 index.remove(couple[i])
             pair_list.append(couple)
             c = 0
-    pair_list = pair_list[0:3000]
     return pair_list
 
 
-def set_pairs_noise(pairs, wham_md_file):
+def set_noise_pairs(pairs, noise_pairs, VCTK_md_file, wham_md_file):
+    print('Generating pairs')
     # Initially take not augmented data
-    md = wham_md_file[wham_md_file['augmented'] is False]
-    # If there are more mixtures than noise than use augmented data
+    md = wham_md_file[wham_md_file['augmented'] == False]
+    # If there are more mixtures than noises then use augmented data
     if len(pairs) > len(md):
         md = wham_md_file
-    # Associate a noise to a mixture
-    pairs_noise = random.sample(list(md.index), len(pairs))
+    # Copy pairs because we are going to remove elements from pairs
+    for pair in pairs.copy():
+        # get sources infos
+        sources = [VCTK_md_file.iloc[pair[i]]
+                   for i in range(len(pair))]
+        # get max_length
+        length_list = [source['length'] for source in sources]
+        max_length = max(length_list)
+        # Ideal choices are noises longer than max_length
+        possible = md[md['length'] >= max_length]
+        # if possible is not empty
+        try:
+            # random noise longer than max_length
+            pair_noise = random.sample(list(possible.index), 1)
+            # add that noise's index to the list
+            noise_pairs.append(pair_noise)
+            # remove that noise from the remaining noises
+            md = md.drop(pair_noise)
+        # if possible is empty
+        except ValueError:
+            # just delete the pair we will redo this process
+            pairs.remove(pair)
 
-    return pairs_noise
+    return noise_pairs
+
+
+def remove_duplicates(utt_pairs, noise_pairs):
+    print('Removing duplicates')
+    # look for identical mixtures O(n²)
+    for i, (pair, pair_noise) in enumerate(zip(utt_pairs, noise_pairs)):
+        for j, (du_pair, du_pair_noise) in enumerate(
+                zip(utt_pairs, noise_pairs)):
+            # sort because [s1,s2] = [s2,s1]
+            if sorted(pair) == sorted(du_pair) and i != j:
+                utt_pairs.remove(du_pair)
+                noise_pairs.remove(du_pair_noise)
+    return utt_pairs, noise_pairs
 
 
 def read_sources(metadata_file, pair, n_src, VCTK_dir):
@@ -230,7 +273,7 @@ def add_noise(wham_md_file, wham_dir, pair_noise, sources_list, sources_info):
     # Get the row corresponding to the index
     noise = wham_md_file.loc[pair_noise]
     # Get the noise path
-    noise_path = os.path.join(wham_dir, noise['origin_path'])
+    noise_path = os.path.join(wham_dir, noise['origin_path'].values[0])
     # Read the noise
     n, _ = sf.read(noise_path, dtype='float32')
     # Keep the first channel
@@ -245,7 +288,7 @@ def add_noise(wham_md_file, wham_dir, pair_noise, sources_list, sources_info):
     else:
         sources_list.append(n[:length])
     # Get relative path
-    sources_info['noise_path'] = noise['origin_path']
+    sources_info['noise_path'] = noise['origin_path'].values[0]
     return sources_info, sources_list
 
 

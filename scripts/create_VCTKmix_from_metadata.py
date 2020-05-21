@@ -218,17 +218,20 @@ def read_sources(row, n_src, VCTK_dir, wham_dir):
     sources_path_list = get_list_from_csv(row, 'source_path', n_src)
     gain_list = get_list_from_csv(row, 'source_gain', n_src)
     sources_list = []
-
+    max_length = 0
     # Read the files to make the mixture
     for sources_path in sources_path_list:
         sources_path = os.path.join(VCTK_dir,
                                     sources_path)
         source, _ = sf.read(sources_path, dtype='float32')
         sources_list.append(source)
+        # Get max_length
+        if max_length < len(source):
+            max_length = len(source)
 
     # Read the noise
     noise_path = os.path.join(wham_dir, row['noise_path'])
-    noise, _ = sf.read(noise_path, dtype='float32')
+    noise, _ = sf.read(noise_path, dtype='float32', stop=max_length)
     if len(noise.shape) > 1:
         noise = noise[:, 0]
     sources_list.append(noise)
