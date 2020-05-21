@@ -12,7 +12,7 @@ To generate VCTK-2Mix, clone the repo and run the main script :
 ```
 git clone https://github.com/JorisCos/VCTK-2Mix
 cd VCTK-2Mix
-./generate_VCTK-2.sh storage_dir
+./generate_VCTK-2mix.sh storage_dir
 ```
 You can either change `storage_dir` by hand in 
 the script or use the command line.  
