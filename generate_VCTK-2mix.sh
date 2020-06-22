@@ -16,7 +16,7 @@ function vctk() {
         rm -f $storage_dir/VCTK-Corpus.zip
     fi
 
-    if ! test -e $VCTK_dir/wav16_cut_fixed; then
+    if ! test -e $VCTK_dir/wav16_cut; then
         echo "Preprocess VCTK"
         python scripts/preprocesing.py --VCTK_dir $VCTK_dir
     fi
