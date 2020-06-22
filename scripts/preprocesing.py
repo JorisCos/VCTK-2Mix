@@ -24,7 +24,7 @@ def main(args):
 
 def preprocess_VCTK(VCTK_dir):
     dir_path = os.path.join(VCTK_dir, 'wav48')
-    save_path_cut = os.path.join(VCTK_dir, 'wav16_cut_fixed')
+    save_path_cut = os.path.join(VCTK_dir, 'wav16_cut')
     os.makedirs(save_path_cut, exist_ok=True)
 
     # Recursively look for .wav files in current directory
