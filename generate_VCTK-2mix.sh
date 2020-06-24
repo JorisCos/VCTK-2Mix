@@ -11,7 +11,7 @@ function vctk() {
     if ! test -e $VCTK_dir; then
         echo "Download VCTK into $storage_dir"
         # If downloading stalls for more than 20s, relaunch from previous state.
-        wget -c --tries=0 --read-timeout=20 https://datashare.is.ed.ac.uk/bitstream/handle/10283/2651/VCTK-Corpus.zip?sequence=2&isAllowed=y -P $storage_dir
+        wget -c --tries=0 --read-timeout=20 https://datashare.is.ed.ac.uk/bitstream/handle/10283/2651/VCTK-Corpus.zip -P $storage_dir
         unzip -qn $storage_dir/VCTK-Corpus.zip -d $storage_dir
         rm -f $storage_dir/VCTK-Corpus.zip
     fi
